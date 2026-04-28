@@ -35,8 +35,26 @@ import { register as regGetGrowthDecomposition } from './growth/get-growth-decom
 import { register as regGetAcquisitionBySource } from './growth/get-acquisition-by-source.js';
 import { register as regComparePeriods } from './growth/compare-periods.js';
 
+// Regional (3)
+import { register as regGetOrdersByState } from './regional/get-orders-by-state.js';
+import { register as regGetRegionShareShifts } from './regional/get-region-share-shifts.js';
+import { register as regGetStatePerformance } from './regional/get-state-performance.js';
+
+// Products (5)
+import { register as regGetTopProducts } from './products/get-top-products.js';
+import { register as regGetProductVelocityChanges } from './products/get-product-velocity-changes.js';
+import { register as regGetDeadInventory } from './products/get-dead-inventory.js';
+import { register as regGetProductSeasonality } from './products/get-product-seasonality.js';
+import { register as regGetBasketAnalysis } from './products/get-basket-analysis.js';
+
+// Traffic (4)
+import { register as regGetRoasByChannel } from './traffic/get-roas-by-channel.js';
+import { register as regGetSpendEfficiency } from './traffic/get-spend-efficiency.js';
+import { register as regGetAttributionSummary } from './traffic/get-attribution-summary.js';
+import { register as regGetCreativeTopPerformers } from './traffic/get-creative-top-performers.js';
+
 export function registerAllTools(): void {
-  // Performance
+  // Performance (7)
   regGetRevenue();
   regGetAov();
   regGetOrdersCount();
@@ -45,14 +63,14 @@ export function registerAllTools(): void {
   regGetRepeatPurchaseRate();
   regGetRevenueConcentrationIndex();
 
-  // CRO
+  // CRO (5)
   regGetFunnelMetrics();
   regGetCartAbandonment();
   regGetCheckoutDropoff();
   regGetSessionQuality();
   regGetLandingPagePerformance();
 
-  // CRM
+  // CRM (6)
   regGetRfmDistribution();
   regGetRfmShifts();
   regGetAtRiskCustomers();
@@ -60,11 +78,29 @@ export function registerAllTools(): void {
   regGetNewVsReturning();
   regGetCustomerConcentration();
 
-  // Growth
+  // Growth (4)
   regGetRevenueMix();
   regGetGrowthDecomposition();
   regGetAcquisitionBySource();
   regComparePeriods();
 
-  // Tarefas 6-7 vao popular as outras 18 tools
+  // Regional (3)
+  regGetOrdersByState();
+  regGetRegionShareShifts();
+  regGetStatePerformance();
+
+  // Products (5)
+  regGetTopProducts();
+  regGetProductVelocityChanges();
+  regGetDeadInventory();
+  regGetProductSeasonality();
+  regGetBasketAnalysis();
+
+  // Traffic (4)
+  regGetRoasByChannel();
+  regGetSpendEfficiency();
+  regGetAttributionSummary();
+  regGetCreativeTopPerformers();
+
+  // Tarefa 7 vai popular as 6 tools cross-cutting finais
 }
