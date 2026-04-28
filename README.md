@@ -42,55 +42,71 @@ node dist/index.js --http :3030
 # MCP endpoint: POST http://127.0.0.1:3030/mcp (Streamable HTTP transport)
 ```
 
-### 3. Docker (decisao final Fase 30-05: VPS dev publico)
+### 3. Docker (Coolify VPS prod — config final em uso)
 
+Coolify auto-deploy a partir de `https://github.com/Ecoupdigital/mcp-gestor-lfpro` (branch `main`).
+
+**Setup one-time:**
 ```bash
-# Gerar token de auth (1x)
-openssl rand -hex 32 | tr -d '\n' > /tmp/mcp_auth_token
+# 1. Gerar token de auth
+openssl rand -hex 32
 
-# Build image
-docker build -t mcp-gestor-lfpro:0.1.2 .
+# 2. Coolify dashboard → criar app:
+#    - Project: gestor-lfpro
+#    - Source: Public Repository
+#    - Repo: https://github.com/Ecoupdigital/mcp-gestor-lfpro
+#    - Branch: main
+#    - Build pack: Dockerfile
+#    - Ports exposed: 3030
+#    - Domain: https://mcp-gestor-lfpro.ecoup.digital
 
-# Run com env explicito (NUNCA esquecer MCP_AUTH_TOKEN em prod)
-SUPABASE_URL=$(grep '^SUPABASE_URL=' /home/projects/gestor-lfpro/.env | cut -d= -f2) \
-SUPABASE_SERVICE_ROLE_KEY=$(grep '^SUPABASE_SERVICE_ROLE_KEY=' /home/projects/gestor-lfpro/.env | cut -d= -f2-) \
-MCP_AUTH_TOKEN=$(cat /tmp/mcp_auth_token) \
-docker run -d --name mcp-gestor-lfpro \
-  --restart unless-stopped \
-  -p 3030:3030 \
+# 3. Env vars no Coolify (NAO build-time, runtime only):
+#    SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, MCP_AUTH_TOKEN,
+#    MCP_HTTP_BIND=0.0.0.0, MCP_HTTP_PORT=3030, NODE_ENV=production
+
+# 4. Healthcheck: path=/health, port=3030, return_code=200
+#    (Dockerfile instala curl no runtime stage pra healthcheck shell)
+
+# 5. Cloudflare DNS: A record mcp-gestor-lfpro.ecoup.digital → 178.104.117.59
+#    (proxied=false pra Let's Encrypt issuar)
+
+# 6. Deploy via API ou painel
+```
+
+**Local Docker (debug only):**
+```bash
+docker build -t mcp-gestor-lfpro:local .
+docker run -d --name mcp-debug -p 3030:3030 \
   -e SUPABASE_URL="$SUPABASE_URL" \
   -e SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY" \
   -e MCP_AUTH_TOKEN="$MCP_AUTH_TOKEN" \
   -e MCP_HTTP_BIND=0.0.0.0 \
-  -e MCP_HTTP_PORT=3030 \
-  mcp-gestor-lfpro:0.1.2
+  mcp-gestor-lfpro:local
 ```
 
-## Hosting (decisao final Fase 30-05)
+## Hosting (final)
 
-**Producao Fase 30:** Container Docker na VPS dev `91.98.164.71`, exposto
-**diretamente pelo IP publico na porta 3030** (sem proxy Coolify nesta
-iteracao — simplicidade > complexidade). Auth via header `X-MCP-Auth: <token>`
-protege /mcp; /health permanece publico.
+**Producao:** Coolify app na VPS prod `178.104.117.59`, expondo
+`https://mcp-gestor-lfpro.ecoup.digital/mcp` via Traefik + Let's Encrypt.
+Auto-deploy on push pra `main` no GitHub. Auth via header `X-MCP-Auth: <token>`
+protege `/mcp`; `/health` publico.
 
-**MCP_HTTP_URL final:** `http://91.98.164.71:3030/mcp`
+**MCP_HTTP_URL final:** `https://mcp-gestor-lfpro.ecoup.digital/mcp`
 
-**Por que VPS dev e nao prod:**
-- MCP server e ferramenta de leitura analitica, nao impacta SLA do dashboard
-- Centraliza com vault/repos do Jonathan (mesmo host)
-- VPS prod foca em apps customer-facing
-- Custo zero adicional (cpx32 ja paga, ja roda 24/7)
-
-**Por que sem Coolify proxy/HTTPS:**
-- O cliente unico hoje (edge function Supabase) nao precisa de TLS
-  para chamar o servidor (auth via token + IP fixed)
-- Coolify proxy adicionaria complexity sem ganho funcional
-- Pode evoluir para subdominio HTTPS quando houver outros consumidores
+**Por que VPS prod (Coolify) — atualizacao pos Fase 30-05:**
+- HTTPS gratis via Traefik + Let's Encrypt (vs HTTP IP:porta da iteracao
+  inicial)
+- Subdominio dedicado (vs IP exposto)
+- Auto-redeploy on git push (vs `docker build` + `docker run` manual)
+- Logs centralizados via Coolify dashboard
+- Mesma infra dos outros apps customer-facing (consistencia operacional)
+- Iteracao inicial (VPS dev `91.98.164.71:3030`) descartada apos validacao
+  do plano 30-05 (decisao revisada pelo Jonathan)
 
 **Auth obrigatorio em prod:**
-- `MCP_AUTH_TOKEN` setado no container e no Supabase Vault
+- `MCP_AUTH_TOKEN` setado no Coolify env e no Supabase Vault
 - Sem token, requests pra /mcp retornam 401
-- Proteje contra acesso publico direto via IP scan
+- Proteje contra acesso publico direto via subdomain scan
 
 **Cliente local (Claude Code stdio):**
 - NAO usa HTTP, usa stdio direto via `node dist/index.js`
