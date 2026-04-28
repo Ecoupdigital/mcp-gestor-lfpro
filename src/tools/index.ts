@@ -21,6 +21,20 @@ import { register as regGetCheckoutDropoff } from './cro/get-checkout-dropoff.js
 import { register as regGetSessionQuality } from './cro/get-session-quality.js';
 import { register as regGetLandingPagePerformance } from './cro/get-landing-page-performance.js';
 
+// CRM (6)
+import { register as regGetRfmDistribution } from './crm/get-rfm-distribution.js';
+import { register as regGetRfmShifts } from './crm/get-rfm-shifts.js';
+import { register as regGetAtRiskCustomers } from './crm/get-at-risk-customers.js';
+import { register as regGetReactivationCandidates } from './crm/get-reactivation-candidates.js';
+import { register as regGetNewVsReturning } from './crm/get-new-vs-returning.js';
+import { register as regGetCustomerConcentration } from './crm/get-customer-concentration.js';
+
+// Growth (4)
+import { register as regGetRevenueMix } from './growth/get-revenue-mix.js';
+import { register as regGetGrowthDecomposition } from './growth/get-growth-decomposition.js';
+import { register as regGetAcquisitionBySource } from './growth/get-acquisition-by-source.js';
+import { register as regComparePeriods } from './growth/compare-periods.js';
+
 export function registerAllTools(): void {
   // Performance
   regGetRevenue();
@@ -38,5 +52,19 @@ export function registerAllTools(): void {
   regGetSessionQuality();
   regGetLandingPagePerformance();
 
-  // Tarefas 5-7 vao popular as outras 28 tools
+  // CRM
+  regGetRfmDistribution();
+  regGetRfmShifts();
+  regGetAtRiskCustomers();
+  regGetReactivationCandidates();
+  regGetNewVsReturning();
+  regGetCustomerConcentration();
+
+  // Growth
+  regGetRevenueMix();
+  regGetGrowthDecomposition();
+  regGetAcquisitionBySource();
+  regComparePeriods();
+
+  // Tarefas 6-7 vao popular as outras 18 tools
 }
