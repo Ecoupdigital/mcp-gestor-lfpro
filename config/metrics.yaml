@@ -1,0 +1,168 @@
+conventions:
+  timezone: America/Sao_Paulo
+  money_storage: cents
+  paid_statuses: [PAID, PARTIALLY_PAID]
+  test_orders_excluded: true
+
+metrics:
+  revenue:
+    description: Receita liquida em centavos (orders pagos, exclui test)
+    formula: sum(orders.total_price_cents) WHERE financial_status IN paid_statuses AND test=false
+    sources: [orders]
+    cents_to_brl: true
+    unit: currency_brl
+
+  aov:
+    description: Average Order Value (ticket medio em centavos)
+    formula: sum(orders.total_price_cents) / count(distinct orders.id)
+    sources: [orders]
+    cents_to_brl: true
+    unit: currency_brl
+
+  orders_count:
+    description: Volume de pedidos no periodo
+    formula: count(distinct orders.id) WHERE financial_status IN paid_statuses
+    sources: [orders]
+    unit: count
+
+  conversion_rate:
+    description: Sessoes que viraram pedidos
+    formula: count(distinct orders.id) / sum(sessions.sessions)
+    sources: [orders, sessions_by_region]
+    unit: percent
+
+  ltv_by_cohort:
+    description: Lifetime Value por mes de aquisicao do cliente
+    formula: sum(orders.total_price_cents) / count(distinct customer_id) GROUP BY cohort_month
+    sources: [orders, customers]
+    cents_to_brl: true
+    unit: currency_brl
+
+  repeat_purchase_rate:
+    description: Percentual de clientes com 2+ pedidos no periodo
+    formula: count(customers WHERE orders_count >= 2) / count(distinct customers)
+    sources: [orders, customers]
+    unit: percent
+
+  revenue_concentration_index:
+    description: Indice tipo Gini de concentracao de receita por cliente
+    formula: gini(customer_revenue_distribution)
+    sources: [orders, customers]
+    unit: ratio
+
+  cart_abandonment_rate:
+    description: Percentual de checkouts iniciados nao convertidos
+    formula: 1 - (orders / checkouts_initiated)
+    sources: [sessions_by_region, orders]
+    unit: percent
+
+  bounce_rate:
+    description: Taxa de bounce do periodo
+    formula: bounces / sessions
+    sources: [sessions_by_region]
+    unit: percent
+
+  pages_per_session:
+    description: Paginas vistas por sessao
+    formula: pages_viewed / sessions
+    sources: [sessions_by_region]
+    unit: ratio
+
+  rfm_distribution:
+    description: Quantidade de clientes em cada segmento RFM
+    formula: count(*) GROUP BY segment FROM customer_rfm_history (latest)
+    sources: [customer_rfm_history]
+    unit: count
+
+  rfm_shifts:
+    description: Clientes que mudaram de segmento entre datas
+    formula: |
+      JOIN customer_rfm_history(t1) WITH customer_rfm_history(t0) ON customer_id
+      WHERE segment(t0) != segment(t1)
+    sources: [customer_rfm_history]
+    unit: count
+
+  customer_concentration:
+    description: Percentual da receita representada pelos top N clientes
+    formula: sum(top_n.revenue) / sum(total.revenue)
+    sources: [orders, customers]
+    unit: percent
+
+  roas:
+    description: Return on Ad Spend (Meta + Google unified)
+    formula: sum(conversion_value_cents) / sum(spend_cents)
+    sources: [meta_ads_insights_daily, google_ads_metrics_daily]
+    cents_to_brl: false
+    unit: ratio
+
+  cpm:
+    description: Custo por mil impressoes
+    formula: sum(spend_cents) / sum(impressions) * 1000
+    sources: [meta_ads_insights_daily, google_ads_metrics_daily]
+    cents_to_brl: true
+    unit: currency_brl
+
+  cpc:
+    description: Custo por clique
+    formula: sum(spend_cents) / sum(clicks)
+    sources: [meta_ads_insights_daily, google_ads_metrics_daily]
+    cents_to_brl: true
+    unit: currency_brl
+
+  cpa:
+    description: Custo por aquisicao (conversao)
+    formula: sum(spend_cents) / sum(conversions)
+    sources: [meta_ads_insights_daily, google_ads_metrics_daily]
+    cents_to_brl: true
+    unit: currency_brl
+
+  ctr:
+    description: Click-through rate
+    formula: sum(clicks) / sum(impressions)
+    sources: [meta_ads_insights_daily, google_ads_metrics_daily]
+    unit: percent
+
+  region_share:
+    description: Share de pedidos por estado
+    formula: count(orders WHERE province=X) / count(orders total)
+    sources: [orders]
+    unit: percent
+
+  product_velocity:
+    description: Pedidos por dia de cada produto
+    formula: count(line_items) / days
+    sources: [orders, line_items]
+    unit: ratio
+
+  basket_size:
+    description: Quantidade media de itens por pedido
+    formula: sum(line_items) / count(orders)
+    sources: [orders, line_items]
+    unit: ratio
+
+  attribution_assist_ratio:
+    description: Percentual de conversoes onde o canal participou (assist) vs last-click
+    formula: assist_conversions / total_conversions
+    sources: [meta_ads_insights_daily, google_ads_metrics_daily]
+    unit: percent
+
+segments:
+  rfm_champions:
+    rule: r_score=5 AND f_score=5 AND m_score=5
+    description: Top tier — recencia, frequencia e monetary maximas
+
+  rfm_loyal:
+    rule: r_score>=4 AND f_score>=4 AND m_score>=3
+    description: Recorrentes consistentes
+
+  rfm_at_risk:
+    rule: r_score<=2 AND f_score>=4
+    description: Compraram bastante mas nao voltam ha tempo
+
+  rfm_hibernating:
+    rule: r_score=1 AND f_score<=2
+    description: Compra unica antiga, sem retorno
+
+  rfm_new_customer:
+    rule: r_score=5 AND f_score=1
+    description: Comprou agora, primeira vez
