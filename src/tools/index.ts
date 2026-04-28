@@ -2,7 +2,7 @@
  * Master registration entrypoint.
  *
  * Cada tool exporta `register(): void` e e chamada aqui.
- * Total esperado: 40 tools (7+5+6+4+3+5+4+6).
+ * Total: 40 tools (7+5+6+4+3+5+4+6).
  */
 
 // Performance (7)
@@ -53,6 +53,14 @@ import { register as regGetSpendEfficiency } from './traffic/get-spend-efficienc
 import { register as regGetAttributionSummary } from './traffic/get-attribution-summary.js';
 import { register as regGetCreativeTopPerformers } from './traffic/get-creative-top-performers.js';
 
+// Cross-cutting (6)
+import { register as regQueryAnomalies } from './cross/query-anomalies.js';
+import { register as regGetCorrelation } from './cross/get-correlation.js';
+import { register as regCohortAnalysis } from './cross/cohort-analysis.js';
+import { register as regForecastSimple } from './cross/forecast-simple.js';
+import { register as regCompareShares } from './cross/compare-shares.js';
+import { register as regGetRecentInsights } from './cross/get-recent-insights.js';
+
 export function registerAllTools(): void {
   // Performance (7)
   regGetRevenue();
@@ -102,5 +110,11 @@ export function registerAllTools(): void {
   regGetAttributionSummary();
   regGetCreativeTopPerformers();
 
-  // Tarefa 7 vai popular as 6 tools cross-cutting finais
+  // Cross-cutting (6)
+  regQueryAnomalies();
+  regGetCorrelation();
+  regCohortAnalysis();
+  regForecastSimple();
+  regCompareShares();
+  regGetRecentInsights();
 }
