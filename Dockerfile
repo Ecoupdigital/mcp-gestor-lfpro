@@ -8,6 +8,7 @@ RUN npm run build
 FROM node:20-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
+RUN apk add --no-cache curl
 COPY --from=build /app/package.json /app/package-lock.json* ./
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/config ./config
