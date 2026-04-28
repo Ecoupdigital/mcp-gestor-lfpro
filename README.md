@@ -42,20 +42,59 @@ node dist/index.js --http :3030
 # MCP endpoint: POST http://127.0.0.1:3030/mcp (Streamable HTTP transport)
 ```
 
-### 3. Docker (recomendado VPS dev)
+### 3. Docker (decisao final Fase 30-05: VPS dev publico)
 
 ```bash
-docker build -t mcp-gestor-lfpro:0.1.0 .
+# Gerar token de auth (1x)
+openssl rand -hex 32 | tr -d '\n' > /tmp/mcp_auth_token
+
+# Build image
+docker build -t mcp-gestor-lfpro:0.1.2 .
+
+# Run com env explicito (NUNCA esquecer MCP_AUTH_TOKEN em prod)
+SUPABASE_URL=$(grep '^SUPABASE_URL=' /home/projects/gestor-lfpro/.env | cut -d= -f2) \
+SUPABASE_SERVICE_ROLE_KEY=$(grep '^SUPABASE_SERVICE_ROLE_KEY=' /home/projects/gestor-lfpro/.env | cut -d= -f2-) \
+MCP_AUTH_TOKEN=$(cat /tmp/mcp_auth_token) \
 docker run -d --name mcp-gestor-lfpro \
   --restart unless-stopped \
-  -p 127.0.0.1:3030:3030 \
-  --env-file /home/projects/mcp-gestor-lfpro/.env \
-  mcp-gestor-lfpro:0.1.0
+  -p 3030:3030 \
+  -e SUPABASE_URL="$SUPABASE_URL" \
+  -e SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY" \
+  -e MCP_AUTH_TOKEN="$MCP_AUTH_TOKEN" \
+  -e MCP_HTTP_BIND=0.0.0.0 \
+  -e MCP_HTTP_PORT=3030 \
+  mcp-gestor-lfpro:0.1.2
 ```
 
-Para a edge function Deno alcancar, expor via Coolify proxy publico
-(ex: `https://mcp-gestor-lfpro.ecoup.digital` para `127.0.0.1:3030` da
-VPS dev). Decisao final do dominio fica para o Plano 30-05 (ops).
+## Hosting (decisao final Fase 30-05)
+
+**Producao Fase 30:** Container Docker na VPS dev `91.98.164.71`, exposto
+**diretamente pelo IP publico na porta 3030** (sem proxy Coolify nesta
+iteracao — simplicidade > complexidade). Auth via header `X-MCP-Auth: <token>`
+protege /mcp; /health permanece publico.
+
+**MCP_HTTP_URL final:** `http://91.98.164.71:3030/mcp`
+
+**Por que VPS dev e nao prod:**
+- MCP server e ferramenta de leitura analitica, nao impacta SLA do dashboard
+- Centraliza com vault/repos do Jonathan (mesmo host)
+- VPS prod foca em apps customer-facing
+- Custo zero adicional (cpx32 ja paga, ja roda 24/7)
+
+**Por que sem Coolify proxy/HTTPS:**
+- O cliente unico hoje (edge function Supabase) nao precisa de TLS
+  para chamar o servidor (auth via token + IP fixed)
+- Coolify proxy adicionaria complexity sem ganho funcional
+- Pode evoluir para subdominio HTTPS quando houver outros consumidores
+
+**Auth obrigatorio em prod:**
+- `MCP_AUTH_TOKEN` setado no container e no Supabase Vault
+- Sem token, requests pra /mcp retornam 401
+- Proteje contra acesso publico direto via IP scan
+
+**Cliente local (Claude Code stdio):**
+- NAO usa HTTP, usa stdio direto via `node dist/index.js`
+- Nao precisa de auth token (filesystem-level isolation)
 
 ## Arquitetura
 
@@ -201,6 +240,7 @@ Convencoes: timezone America/Sao_Paulo, money em cents, paid_statuses
 | `SUPABASE_SERVICE_ROLE_KEY` | sim | — | full access; bypassa RLS |
 | `MCP_HTTP_PORT` | nao | `3030` | porta HTTP transport |
 | `MCP_HTTP_BIND` | nao | `127.0.0.1` | bind address (use `0.0.0.0` em Docker) |
+| `MCP_AUTH_TOKEN` | sim em prod HTTP | — | token 32+ bytes hex; obriga `X-MCP-Auth` em /mcp |
 
 ## Testes
 
