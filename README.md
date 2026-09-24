@@ -1,6 +1,6 @@
 # mcp-gestor-lfpro
 
-MCP server expondo **40 tools de e-commerce certificadas** ancoradas em
+MCP server expondo **41 tools de e-commerce certificadas** ancoradas em
 semantic layer (`config/metrics.yaml`). Usado pelo agente cognitivo do
 gestor-lfpro (cron + Claude Code interativo).
 
@@ -25,7 +25,7 @@ claude mcp list
 # deve mostrar gestor-lfpro: connected
 ```
 
-Apos reiniciar o Claude Code, as 40 tools ficam disponiveis. Exemplos
+Apos reiniciar o Claude Code, as 41 tools ficam disponiveis. Exemplos
 de prompts interativos:
 
 - "Lista todas as tools do MCP server gestor-lfpro"
@@ -196,11 +196,12 @@ tests/
 - `get_product_seasonality` — by_month + by_dow + peak (requer 90+ dias)
 - `get_basket_analysis` — pares de produtos co-occurrence + lift
 
-### Trafego (4)
+### Trafego (5)
 - `get_roas_by_channel` — Meta + Google unified ROAS, CTR, CPA
 - `get_spend_efficiency` — CPM, CPC, CPA per channel
 - `get_attribution_summary` — last-click vs all_conversions Google
 - `get_creative_top_performers` — top ads por ROAS (apenas sinaliza, nao recomenda)
+- `get_trafego_serie` — serie mes/semana do snapshot do gestor (MER, % ADS, CAC, canais UTM, publicos Meta). Fonte oficial do relatorio semanal: bate com a aba Evolucao Mensal
 
 ### Cross-cutting (6)
 - `query_anomalies` — z-score sobre serie temporal (sensitivity low/medium/high)
@@ -210,7 +211,7 @@ tests/
 - `compare_shares` — apples-to-apples share de region|utm_source entre 2 periodos
 - `get_recent_insights` — memoria curta da tabela `insights`
 
-**Total: 7+5+6+4+3+5+4+6 = 40 tools**
+**Total: 7+5+6+4+3+5+5+6 = 41 tools**
 
 ## Semantic layer (`config/metrics.yaml`)
 
@@ -264,7 +265,7 @@ Convencoes: timezone America/Sao_Paulo, money em cents, paid_statuses
 npm test
 # 2 test files, 12 tests:
 # - tests/semantic.test.ts (6 tests)
-# - tests/tools.test.ts (6 tests, valida 40 tools registradas + Zod safeParse)
+# - tests/tools.test.ts (6 tests, valida 41 tools registradas + Zod safeParse)
 ```
 
 ## Smoke real validado

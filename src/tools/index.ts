@@ -2,7 +2,7 @@
  * Master registration entrypoint.
  *
  * Cada tool exporta `register(): void` e e chamada aqui.
- * Total: 40 tools (7+5+6+4+3+5+4+6).
+ * Total: 41 tools (7+5+6+4+3+5+5+6).
  */
 
 // Performance (7)
@@ -50,6 +50,7 @@ import { register as regGetBasketAnalysis } from './products/get-basket-analysis
 // Traffic (4)
 import { register as regGetRoasByChannel } from './traffic/get-roas-by-channel.js';
 import { register as regGetSpendEfficiency } from './traffic/get-spend-efficiency.js';
+import { register as regGetTrafegoSerie } from './traffic/get-trafego-serie.js';
 import { register as regGetAttributionSummary } from './traffic/get-attribution-summary.js';
 import { register as regGetCreativeTopPerformers } from './traffic/get-creative-top-performers.js';
 
@@ -107,6 +108,7 @@ export function registerAllTools(): void {
   // Traffic (4)
   regGetRoasByChannel();
   regGetSpendEfficiency();
+  regGetTrafegoSerie();
   regGetAttributionSummary();
   regGetCreativeTopPerformers();
 

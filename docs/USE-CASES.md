@@ -8,7 +8,7 @@ claude mcp list   # gestor-lfpro: connected
 ```
 
 Reinicia Claude Code (saia da sessao, abra nova). Esses casos sao perguntas
-ad-hoc que o agente Claude vai responder usando **as 40 tools** do MCP server.
+ad-hoc que o agente Claude vai responder usando **as 41 tools** do MCP server.
 Todos foram validados em prod (smoke ZERO drift, ver SUMMARY 30-01).
 
 > Tempo medio: 8-15 segundos por pergunta (3-5 tool calls).

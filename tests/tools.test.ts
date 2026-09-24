@@ -14,8 +14,8 @@ beforeAll(() => {
 });
 
 describe('tool registry', () => {
-  it('registers exactly 40 tools', () => {
-    expect(getToolCount()).toBe(40);
+  it('registers exactly 41 tools', () => {
+    expect(getToolCount()).toBe(41);
   });
 
   it('groups tools in 7 areas + cross', () => {
@@ -25,7 +25,7 @@ describe('tool registry', () => {
     expect(listToolsByArea('growth')).toHaveLength(4);
     expect(listToolsByArea('regional')).toHaveLength(3);
     expect(listToolsByArea('products')).toHaveLength(5);
-    expect(listToolsByArea('traffic')).toHaveLength(4);
+    expect(listToolsByArea('traffic')).toHaveLength(5);
     expect(listToolsByArea('cross')).toHaveLength(6);
     const total =
       listToolsByArea('performance').length +
@@ -36,12 +36,12 @@ describe('tool registry', () => {
       listToolsByArea('products').length +
       listToolsByArea('traffic').length +
       listToolsByArea('cross').length;
-    expect(total).toBe(40);
+    expect(total).toBe(41);
   });
 
   it('listTools returns valid JSON Schema', () => {
     const tools = listTools();
-    expect(tools).toHaveLength(40);
+    expect(tools).toHaveLength(41);
     for (const t of tools) {
       expect(t).toHaveProperty('name');
       expect(t).toHaveProperty('description');
