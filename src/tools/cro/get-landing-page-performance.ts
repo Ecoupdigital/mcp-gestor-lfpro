@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { registerTool } from '../registry.js';
 import { getSupabase } from '../../supabase.js';
-import { PeriodPresetSchema, resolvePeriod, envelope, notAvailable } from '../util.js';
+import { PeriodPresetSchema, resolvePeriod, envelope, notAvailable, SALE_STATUSES, netOrderTotal } from '../util.js';
 
 const Input = z.object({
   period: PeriodPresetSchema,
@@ -21,10 +21,10 @@ export function register(): void {
       // Fallback factual: distribuicao de pedidos por landing_site
       const { data, error } = await sb
         .from('shopify_orders')
-        .select('landing_site, total_price')
+        .select('landing_site, total_price, refunded_amount')
         .gte('created_at', period.from)
         .lte('created_at', period.to + 'T23:59:59')
-        .in('financial_status', ['PAID', 'PARTIALLY_PAID'])
+        .in('financial_status', SALE_STATUSES)
         .eq('test', false)
         .not('landing_site', 'is', null);
       if (error) {
@@ -35,7 +35,7 @@ export function register(): void {
         const key = r.landing_site ?? '(none)';
         const cur = byPage.get(key) ?? { orders: 0, revenue: 0 };
         cur.orders += 1;
-        cur.revenue += Number(r.total_price ?? 0);
+        cur.revenue += netOrderTotal(r);
         byPage.set(key, cur);
       }
       const pages = Array.from(byPage.entries())

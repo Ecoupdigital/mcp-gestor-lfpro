@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { registerTool } from '../registry.js';
 import { getSupabase } from '../../supabase.js';
-import { PeriodPresetSchema, resolvePeriod, envelope } from '../util.js';
+import { PeriodPresetSchema, resolvePeriod, envelope, SALE_STATUSES, netOrderTotal } from '../util.js';
 
 const Input = z.object({
   period_atual: PeriodPresetSchema,
@@ -15,10 +15,10 @@ async function aggregateByState(
 ): Promise<{ shares: Map<string, number>; totalOrders: number; totalRevenue: number }> {
   const { data, error } = await sb
     .from('shopify_orders')
-    .select('total_price, shipping_address:shopify_shipping_addresses!shipping_address_id(province_code)')
+    .select('total_price, refunded_amount, shipping_address:shopify_shipping_addresses!shipping_address_id(province_code)')
     .gte('created_at', from)
     .lte('created_at', to + 'T23:59:59')
-    .in('financial_status', ['PAID', 'PARTIALLY_PAID'])
+    .in('financial_status', SALE_STATUSES)
     .eq('test', false);
   if (error) throw new Error(error.message);
   const revenueByState = new Map<string, number>();
@@ -29,7 +29,7 @@ async function aggregateByState(
     shipping_address?: { province_code?: string | null } | null;
   }>) {
     const code = row.shipping_address?.province_code ?? '(unknown)';
-    const v = Number(row.total_price ?? 0);
+    const v = netOrderTotal(row);
     revenueByState.set(code, (revenueByState.get(code) ?? 0) + v);
     totalRevenue += v;
     totalOrders += 1;

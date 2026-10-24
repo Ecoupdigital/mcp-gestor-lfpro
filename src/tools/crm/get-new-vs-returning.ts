@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { registerTool } from '../registry.js';
 import { getSupabase } from '../../supabase.js';
-import { PeriodPresetSchema, resolvePeriod, envelope } from '../util.js';
+import { PeriodPresetSchema, resolvePeriod, envelope, SALE_STATUSES, netOrderTotal } from '../util.js';
 
 const Input = z.object({ period: PeriodPresetSchema });
 
@@ -17,10 +17,10 @@ export function register(): void {
       const sb = getSupabase();
       const { data, error } = await sb
         .from('shopify_orders')
-        .select('customer_id, total_price, customer_order_index, created_at')
+        .select('customer_id, total_price, refunded_amount, customer_order_index, created_at')
         .gte('created_at', period.from)
         .lte('created_at', period.to + 'T23:59:59')
-        .in('financial_status', ['PAID', 'PARTIALLY_PAID'])
+        .in('financial_status', SALE_STATUSES)
         .eq('test', false)
         .not('customer_id', 'is', null);
       if (error) throw new Error(error.message);
@@ -39,10 +39,10 @@ export function register(): void {
         }
         if (isFirst) {
           newCustomers.add(r.customer_id);
-          newRevenue += Number(r.total_price ?? 0);
+          newRevenue += netOrderTotal(r);
         } else {
           returning.add(r.customer_id);
-          returningRevenue += Number(r.total_price ?? 0);
+          returningRevenue += netOrderTotal(r);
         }
       }
       const total = newRevenue + returningRevenue;

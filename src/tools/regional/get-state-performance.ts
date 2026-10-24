@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { registerTool } from '../registry.js';
 import { getSupabase } from '../../supabase.js';
-import { PeriodPresetSchema, resolvePeriod, envelope } from '../util.js';
+import { PeriodPresetSchema, resolvePeriod, envelope, SALE_STATUSES, netOrderTotal } from '../util.js';
 
 const Input = z.object({
   state: z.string().regex(/^[A-Z]{2}$/, 'province_code 2 letters uppercase ex: RS, SP, RJ'),
@@ -24,16 +24,16 @@ export function register(): void {
       const { data, error } = await sb
         .from('shopify_orders')
         .select(
-          'id, total_price, shipping_address:shopify_shipping_addresses!shipping_address_id!inner(province_code)',
+          'id, total_price, refunded_amount, shipping_address:shopify_shipping_addresses!shipping_address_id!inner(province_code)',
         )
         .gte('created_at', period.from)
         .lte('created_at', period.to + 'T23:59:59')
-        .in('financial_status', ['PAID', 'PARTIALLY_PAID'])
+        .in('financial_status', SALE_STATUSES)
         .eq('test', false)
         .eq('shipping_address.province_code', input.state);
       if (error) throw new Error(error.message);
       const orders = (data ?? []) as unknown as Array<{ id: number; total_price: number | null }>;
-      const revenue = orders.reduce((s, o) => s + Number(o.total_price ?? 0), 0);
+      const revenue = orders.reduce((s, o) => s + netOrderTotal(o), 0);
       const aov = orders.length > 0 ? revenue / orders.length : 0;
 
       // Top products via line_items

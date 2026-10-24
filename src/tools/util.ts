@@ -94,3 +94,39 @@ export function envelope<T>(data: T, opts?: Partial<ToolResultEnvelope<T>>): Too
 export function notAvailable(reason: string): NotAvailableData {
   return { not_available: true, reason };
 }
+
+/**
+ * Status que contam como venda. PARTIALLY_REFUNDED entra desde 24/10/2026, no
+ * dia do pedido e com o valor liquido do que foi devolvido (mesma regra do
+ * gestor: shopify_orders.refunded_amount, 0 em pedido sem reembolso parcial).
+ */
+export const SALE_STATUSES = ['PAID', 'PARTIALLY_PAID', 'PARTIALLY_REFUNDED'];
+
+/** Valor do pedido ja sem o que foi devolvido. Selecione total_price e refunded_amount. */
+export function netOrderTotal(row: {
+  total_price?: number | string | null;
+  refunded_amount?: number | string | null;
+}): number {
+  return Number(row.total_price ?? 0) - Number(row.refunded_amount ?? 0);
+}
+
+/**
+ * Unidades devolvidas por item dos pedidos informados (view v_line_item_refunds
+ * do gestor). Chave `${order_id}|${shopify_line_item_id}`.
+ */
+export async function fetchRefundedQuantities(
+  sb: { from: (t: string) => any },
+  orderIds: number[],
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  if (orderIds.length === 0) return out;
+  const { data, error } = await sb
+    .from('v_line_item_refunds')
+    .select('order_id, shopify_line_item_id, refunded_quantity')
+    .in('order_id', orderIds);
+  if (error) throw new Error(error.message);
+  for (const r of (data ?? []) as Array<{ order_id: number; shopify_line_item_id: string; refunded_quantity: number }>) {
+    out.set(`${r.order_id}|${r.shopify_line_item_id}`, Number(r.refunded_quantity ?? 0));
+  }
+  return out;
+}

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { registerTool } from '../registry.js';
 import { getSupabase } from '../../supabase.js';
-import { PeriodPresetSchema, resolvePeriod, envelope } from '../util.js';
+import { PeriodPresetSchema, resolvePeriod, envelope, SALE_STATUSES, netOrderTotal } from '../util.js';
 
 const Input = z.object({
   metric_a: z.enum(['revenue', 'orders', 'spend_meta', 'spend_google']),
@@ -19,15 +19,15 @@ async function dailySeries(
   if (metric === 'revenue' || metric === 'orders') {
     const { data } = await sb
       .from('shopify_orders')
-      .select('created_at, total_price')
+      .select('created_at, total_price, refunded_amount')
       .gte('created_at', from)
       .lte('created_at', to + 'T23:59:59')
-      .in('financial_status', ['PAID', 'PARTIALLY_PAID'])
+      .in('financial_status', SALE_STATUSES)
       .eq('test', false);
     for (const r of data ?? []) {
       if (!r.created_at) continue;
       const d = r.created_at.slice(0, 10);
-      const v = metric === 'revenue' ? Number(r.total_price ?? 0) : 1;
+      const v = metric === 'revenue' ? netOrderTotal(r) : 1;
       out.set(d, (out.get(d) ?? 0) + v);
     }
   } else if (metric === 'spend_meta') {
