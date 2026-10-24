@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { registerTool } from '../registry.js';
 import { getSupabase } from '../../supabase.js';
-import { PeriodPresetSchema, resolvePeriod, envelope } from '../util.js';
+import { PeriodPresetSchema, resolvePeriod, envelope, SALE_STATUSES, fetchRefundedQuantities } from '../util.js';
 
 const Input = z.object({
   period: PeriodPresetSchema,
@@ -25,7 +25,7 @@ export function register(): void {
         .select('id')
         .gte('created_at', period.from)
         .lte('created_at', period.to + 'T23:59:59')
-        .in('financial_status', ['PAID', 'PARTIALLY_PAID'])
+        .in('financial_status', SALE_STATUSES)
         .eq('test', false);
       if (oErr) throw new Error(oErr.message);
       const orderIds = (orders ?? []).map((o: { id: number }) => o.id);
@@ -37,9 +37,11 @@ export function register(): void {
         const chunk = orderIds.slice(i, i + 500);
         const { data: items, error } = await sb
           .from('shopify_line_items')
-          .select('shopify_product_id, product_title, sku, quantity, price')
+          .select('order_id, shopify_line_item_id, shopify_product_id, product_title, sku, quantity, price')
           .in('order_id', chunk);
         if (error) throw new Error(error.message);
+        // reembolso parcial: unidade devolvida nao conta como vendida
+        const refunded = await fetchRefundedQuantities(sb, chunk);
         for (const it of items ?? []) {
           const key = it.shopify_product_id ?? '(none)';
           const cur = productAgg.get(key) ?? {
@@ -48,7 +50,7 @@ export function register(): void {
             volume: 0,
             revenue: 0,
           };
-          const qty = it.quantity ?? 0;
+          const qty = Math.max(0, (it.quantity ?? 0) - (refunded.get(`${it.order_id}|${it.shopify_line_item_id}`) ?? 0));
           cur.volume += qty;
           cur.revenue += Number(it.price ?? 0) * qty;
           productAgg.set(key, cur);

@@ -1,20 +1,20 @@
 conventions:
   timezone: America/Sao_Paulo
   money_storage: cents
-  paid_statuses: [PAID, PARTIALLY_PAID]
+  paid_statuses: [PAID, PARTIALLY_PAID, PARTIALLY_REFUNDED]
   test_orders_excluded: true
 
 metrics:
   revenue:
     description: Receita liquida em centavos (orders pagos, exclui test)
-    formula: sum(orders.total_price_cents) WHERE financial_status IN paid_statuses AND test=false
+    formula: sum(orders.total_price_cents - orders.refunded_amount_cents) WHERE financial_status IN paid_statuses AND test=false
     sources: [orders]
     cents_to_brl: true
     unit: currency_brl
 
   aov:
     description: Average Order Value (ticket medio em centavos)
-    formula: sum(orders.total_price_cents) / count(distinct orders.id)
+    formula: sum(orders.total_price_cents - orders.refunded_amount_cents) / count(distinct orders.id)
     sources: [orders]
     cents_to_brl: true
     unit: currency_brl

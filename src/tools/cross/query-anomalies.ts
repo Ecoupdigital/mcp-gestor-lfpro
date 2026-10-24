@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { registerTool } from '../registry.js';
 import { getSupabase } from '../../supabase.js';
-import { PeriodPresetSchema, resolvePeriod, envelope, notAvailable } from '../util.js';
+import { PeriodPresetSchema, resolvePeriod, envelope, notAvailable, SALE_STATUSES, netOrderTotal } from '../util.js';
 
 const Input = z.object({
   metric: z.enum(['revenue', 'orders_count', 'aov', 'spend_meta', 'spend_google', 'roas_unified']),
@@ -27,10 +27,10 @@ export function register(): void {
       if (input.metric === 'revenue' || input.metric === 'orders_count' || input.metric === 'aov') {
         const { data, error } = await sb
           .from('shopify_orders')
-          .select('created_at, total_price')
+          .select('created_at, total_price, refunded_amount')
           .gte('created_at', period.from)
           .lte('created_at', period.to + 'T23:59:59')
-          .in('financial_status', ['PAID', 'PARTIALLY_PAID'])
+          .in('financial_status', SALE_STATUSES)
           .eq('test', false);
         if (error) throw new Error(error.message);
         const dailyRev = new Map<string, number>();
@@ -38,7 +38,7 @@ export function register(): void {
         for (const r of data ?? []) {
           if (!r.created_at) continue;
           const day = r.created_at.slice(0, 10);
-          dailyRev.set(day, (dailyRev.get(day) ?? 0) + Number(r.total_price ?? 0));
+          dailyRev.set(day, (dailyRev.get(day) ?? 0) + netOrderTotal(r));
           dailyCount.set(day, (dailyCount.get(day) ?? 0) + 1);
         }
         for (const [day, rev] of dailyRev) {

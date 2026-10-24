@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { registerTool } from '../registry.js';
 import { getSupabase } from '../../supabase.js';
-import { PeriodPresetSchema, resolvePeriod, envelope } from '../util.js';
+import { PeriodPresetSchema, resolvePeriod, envelope, SALE_STATUSES, netOrderTotal } from '../util.js';
 
 const Input = z.object({ period: PeriodPresetSchema });
 
@@ -17,10 +17,10 @@ export function register(): void {
       const sb = getSupabase();
       const { data, error } = await sb
         .from('shopify_orders')
-        .select('total_price, shipping_address:shopify_shipping_addresses!shipping_address_id(province_code, province)')
+        .select('total_price, refunded_amount, shipping_address:shopify_shipping_addresses!shipping_address_id(province_code, province)')
         .gte('created_at', period.from)
         .lte('created_at', period.to + 'T23:59:59')
-        .in('financial_status', ['PAID', 'PARTIALLY_PAID'])
+        .in('financial_status', SALE_STATUSES)
         .eq('test', false);
       if (error) throw new Error(error.message);
       const counts = new Map<string, { orders: number; revenue: number; province_name: string }>();
@@ -32,7 +32,7 @@ export function register(): void {
         const name = row.shipping_address?.province ?? '(unknown)';
         const cur = counts.get(code) ?? { orders: 0, revenue: 0, province_name: name };
         cur.orders += 1;
-        cur.revenue += Number(row.total_price ?? 0);
+        cur.revenue += netOrderTotal(row);
         cur.province_name = name;
         counts.set(code, cur);
       }

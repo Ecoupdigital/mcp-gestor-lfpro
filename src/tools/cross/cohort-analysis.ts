@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { registerTool } from '../registry.js';
 import { getSupabase } from '../../supabase.js';
-import { envelope, notAvailable } from '../util.js';
+import { envelope, notAvailable, SALE_STATUSES, netOrderTotal } from '../util.js';
 
 const Input = z.object({
   cohort_dim: z.enum(['acquisition_month']),
@@ -57,14 +57,14 @@ export function register(): void {
             const chunk = ids.slice(i, i + 500);
             const { data } = await sb
               .from('shopify_orders')
-              .select('total_price')
+              .select('total_price, refunded_amount')
               .in('customer_id', chunk)
-              .in('financial_status', ['PAID', 'PARTIALLY_PAID'])
+              .in('financial_status', SALE_STATUSES)
               .eq('test', false)
               .gte('created_at', periodStart.toISOString())
               .lte('created_at', periodEnd.toISOString());
             for (const o of data ?? []) {
-              if (input.metric === 'ltv') acc += Number(o.total_price ?? 0);
+              if (input.metric === 'ltv') acc += netOrderTotal(o);
               else acc += 1;
             }
           }

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { registerTool } from '../registry.js';
 import { getSupabase } from '../../supabase.js';
-import { envelope, notAvailable } from '../util.js';
+import { envelope, notAvailable, SALE_STATUSES, netOrderTotal } from '../util.js';
 
 const Input = z.object({
   metric: z.enum(['revenue', 'orders']),
@@ -22,10 +22,10 @@ export function register(): void {
       const to = today.toISOString().slice(0, 10);
       const { data, error } = await sb
         .from('shopify_orders')
-        .select('created_at, total_price')
+        .select('created_at, total_price, refunded_amount')
         .gte('created_at', from)
         .lte('created_at', to + 'T23:59:59')
-        .in('financial_status', ['PAID', 'PARTIALLY_PAID'])
+        .in('financial_status', SALE_STATUSES)
         .eq('test', false);
       if (error) throw new Error(error.message);
       const series = new Map<string, number>();
@@ -33,7 +33,7 @@ export function register(): void {
       for (const r of data ?? []) {
         if (!r.created_at) continue;
         const d = r.created_at.slice(0, 10);
-        series.set(d, (series.get(d) ?? 0) + Number(r.total_price ?? 0));
+        series.set(d, (series.get(d) ?? 0) + netOrderTotal(r));
         counts.set(d, (counts.get(d) ?? 0) + 1);
       }
       const days = Array.from(series.keys()).sort();

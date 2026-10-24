@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { registerTool } from '../registry.js';
 import { getSupabase } from '../../supabase.js';
-import { PeriodPresetSchema, resolvePeriod, envelope, notAvailable } from '../util.js';
+import { PeriodPresetSchema, resolvePeriod, envelope, notAvailable, SALE_STATUSES } from '../util.js';
 
 const Input = z.object({ period: PeriodPresetSchema });
 
@@ -35,7 +35,7 @@ export function register(): void {
         .select('*', { count: 'exact', head: true })
         .gte('created_at', period.from)
         .lte('created_at', period.to + 'T23:59:59')
-        .in('financial_status', ['PAID', 'PARTIALLY_PAID'])
+        .in('financial_status', SALE_STATUSES)
         .eq('test', false);
       if (oErr) throw new Error(oErr.message);
       const orders = ordersCount ?? 0;

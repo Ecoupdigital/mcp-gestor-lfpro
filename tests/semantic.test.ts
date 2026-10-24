@@ -40,6 +40,7 @@ describe('semantic layer', () => {
     expect(layer.conventions.money_storage).toBe('cents');
     expect(layer.conventions.paid_statuses).toContain('PAID');
     expect(layer.conventions.paid_statuses).toContain('PARTIALLY_PAID');
+    expect(layer.conventions.paid_statuses).toContain('PARTIALLY_REFUNDED');
     expect(layer.conventions.test_orders_excluded).toBe(true);
   });
 });

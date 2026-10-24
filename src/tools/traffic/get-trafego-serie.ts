@@ -6,7 +6,7 @@ import { envelope } from '../util.js';
 // Série mês a mês (ou semana a semana) do Tráfego ADS lida do MESMO snapshot
 // que a aba "Evolução Mensal" do gestor (RPC get_trafego_series). Existe pra o
 // relatório semanal e a tela mostrarem o mesmo MER, % ADS e CAC: horário de
-// Brasília, pedido pago = PAID/PARTIALLY_PAID, sem test.
+// Brasília, pedido pago = PAID/PARTIALLY_PAID/PARTIALLY_REFUNDED (este pelo valor liquido), sem test.
 // Fórmulas iguais a dashboard/lib/trafego-historico.ts (repo gestor-lfpro).
 
 // Antes disso parte do gasto Meta está em contas que o token não enxerga.

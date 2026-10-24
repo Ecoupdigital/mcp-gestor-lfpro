@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { registerTool } from '../registry.js';
 import { getSupabase } from '../../supabase.js';
-import { PeriodPresetSchema, resolvePeriod, envelope } from '../util.js';
+import { PeriodPresetSchema, resolvePeriod, envelope, SALE_STATUSES, netOrderTotal } from '../util.js';
 
 const Input = z.object({
   period: PeriodPresetSchema,
@@ -20,25 +20,25 @@ export function register(): void {
       const sb = getSupabase();
       let query = sb
         .from('shopify_orders')
-        .select('total_price, customer_id, shopify_customers!inner(rfm_segment)')
+        .select('total_price, refunded_amount, customer_id, shopify_customers!inner(rfm_segment)')
         .gte('created_at', period.from)
         .lte('created_at', period.to + 'T23:59:59')
-        .in('financial_status', ['PAID', 'PARTIALLY_PAID'])
+        .in('financial_status', SALE_STATUSES)
         .eq('test', false);
       if (input.segment) {
         query = sb
           .from('shopify_orders')
-          .select('total_price, customer_id, shopify_customers!inner(rfm_segment)')
+          .select('total_price, refunded_amount, customer_id, shopify_customers!inner(rfm_segment)')
           .gte('created_at', period.from)
           .lte('created_at', period.to + 'T23:59:59')
-          .in('financial_status', ['PAID', 'PARTIALLY_PAID'])
+          .in('financial_status', SALE_STATUSES)
           .eq('test', false)
           .eq('shopify_customers.rfm_segment', input.segment);
       }
       const { data, error } = await query;
       if (error) throw new Error(error.message);
       const orders = data ?? [];
-      const total = orders.reduce((sum, r) => sum + Number(r.total_price ?? 0), 0);
+      const total = orders.reduce((sum, r) => sum + netOrderTotal(r), 0);
       const aov = orders.length > 0 ? total / orders.length : 0;
       return envelope(
         {

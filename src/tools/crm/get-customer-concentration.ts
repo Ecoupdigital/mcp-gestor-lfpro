@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { registerTool } from '../registry.js';
 import { getSupabase } from '../../supabase.js';
-import { PeriodPresetSchema, resolvePeriod, envelope } from '../util.js';
+import { PeriodPresetSchema, resolvePeriod, envelope, SALE_STATUSES, netOrderTotal } from '../util.js';
 
 const Input = z.object({
   period: PeriodPresetSchema,
@@ -20,17 +20,17 @@ export function register(): void {
       const sb = getSupabase();
       const { data, error } = await sb
         .from('shopify_orders')
-        .select('customer_id, total_price')
+        .select('customer_id, total_price, refunded_amount')
         .gte('created_at', period.from)
         .lte('created_at', period.to + 'T23:59:59')
-        .in('financial_status', ['PAID', 'PARTIALLY_PAID'])
+        .in('financial_status', SALE_STATUSES)
         .eq('test', false)
         .not('customer_id', 'is', null);
       if (error) throw new Error(error.message);
       const byCustomer = new Map<number, number>();
       for (const r of data ?? []) {
         if (r.customer_id == null) continue;
-        byCustomer.set(r.customer_id, (byCustomer.get(r.customer_id) ?? 0) + Number(r.total_price ?? 0));
+        byCustomer.set(r.customer_id, (byCustomer.get(r.customer_id) ?? 0) + netOrderTotal(r));
       }
       const sorted = Array.from(byCustomer.values()).sort((a, b) => b - a);
       const total = sorted.reduce((s, v) => s + v, 0);

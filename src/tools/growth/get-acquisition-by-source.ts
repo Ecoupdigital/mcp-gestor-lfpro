@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { registerTool } from '../registry.js';
 import { getSupabase } from '../../supabase.js';
-import { PeriodPresetSchema, resolvePeriod, envelope } from '../util.js';
+import { PeriodPresetSchema, resolvePeriod, envelope, SALE_STATUSES, netOrderTotal } from '../util.js';
 
 const Input = z.object({
   period: PeriodPresetSchema,
@@ -20,17 +20,17 @@ export function register(): void {
       const sb = getSupabase();
       const { data, error } = await sb
         .from('shopify_orders')
-        .select('total_price, utm_source, utm_medium, utm_campaign, customer_order_index')
+        .select('total_price, refunded_amount, utm_source, utm_medium, utm_campaign, customer_order_index')
         .gte('created_at', period.from)
         .lte('created_at', period.to + 'T23:59:59')
-        .in('financial_status', ['PAID', 'PARTIALLY_PAID'])
+        .in('financial_status', SALE_STATUSES)
         .eq('test', false);
       if (error) throw new Error(error.message);
       const counts = new Map<string, { revenue: number; orders: number; new_customers: number }>();
       for (const row of data ?? []) {
         const key = row.utm_source ?? '(none)';
         const cur = counts.get(key) ?? { revenue: 0, orders: 0, new_customers: 0 };
-        cur.revenue += Number(row.total_price ?? 0);
+        cur.revenue += netOrderTotal(row);
         cur.orders += 1;
         if (row.customer_order_index === 1) cur.new_customers += 1;
         counts.set(key, cur);

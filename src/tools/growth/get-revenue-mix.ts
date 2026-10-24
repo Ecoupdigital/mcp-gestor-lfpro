@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { registerTool } from '../registry.js';
 import { getSupabase } from '../../supabase.js';
-import { PeriodPresetSchema, resolvePeriod, envelope } from '../util.js';
+import { PeriodPresetSchema, resolvePeriod, envelope, SALE_STATUSES, netOrderTotal } from '../util.js';
 
 const Input = z.object({
   period: PeriodPresetSchema,
@@ -18,22 +18,22 @@ export function register(): void {
     handler: async (input) => {
       const period = resolvePeriod(input.period);
       const sb = getSupabase();
-      let selectCols = 'total_price';
+      let selectCols = 'total_price, refunded_amount';
       let groupKey: string;
       if (input.dimension === 'channel') {
-        selectCols = 'total_price, source_name, channel_name';
+        selectCols = 'total_price, refunded_amount, source_name, channel_name';
         groupKey = 'source_name';
       } else if (input.dimension === 'utm_source') {
-        selectCols = 'total_price, utm_source';
+        selectCols = 'total_price, refunded_amount, utm_source';
         groupKey = 'utm_source';
       } else if (input.dimension === 'utm_medium') {
-        selectCols = 'total_price, utm_medium';
+        selectCols = 'total_price, refunded_amount, utm_medium';
         groupKey = 'utm_medium';
       } else if (input.dimension === 'utm_campaign') {
-        selectCols = 'total_price, utm_campaign';
+        selectCols = 'total_price, refunded_amount, utm_campaign';
         groupKey = 'utm_campaign';
       } else {
-        selectCols = 'total_price, customer_id, shopify_customers!inner(rfm_segment)';
+        selectCols = 'total_price, refunded_amount, customer_id, shopify_customers!inner(rfm_segment)';
         groupKey = 'rfm_segment';
       }
       const query = sb
@@ -41,7 +41,7 @@ export function register(): void {
         .select(selectCols)
         .gte('created_at', period.from)
         .lte('created_at', period.to + 'T23:59:59')
-        .in('financial_status', ['PAID', 'PARTIALLY_PAID'])
+        .in('financial_status', SALE_STATUSES)
         .eq('test', false);
       const { data, error } = await query;
       if (error) throw new Error(error.message);
@@ -55,7 +55,7 @@ export function register(): void {
           key = (row[groupKey] as string | null) ?? '(none)';
         }
         const cur = counts.get(key) ?? { revenue: 0, orders: 0 };
-        cur.revenue += Number((row.total_price as number | null) ?? 0);
+        cur.revenue += netOrderTotal(row as { total_price?: number | null; refunded_amount?: number | null });
         cur.orders += 1;
         counts.set(key, cur);
       }

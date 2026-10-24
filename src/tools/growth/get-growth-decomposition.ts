@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { registerTool } from '../registry.js';
 import { getSupabase } from '../../supabase.js';
-import { PeriodPresetSchema, resolvePeriod, envelope, notAvailable } from '../util.js';
+import { PeriodPresetSchema, resolvePeriod, envelope, notAvailable, SALE_STATUSES, netOrderTotal } from '../util.js';
 
 const Input = z.object({
   period_atual: PeriodPresetSchema,
@@ -11,13 +11,13 @@ const Input = z.object({
 async function fetchPeriod(sb: ReturnType<typeof import('../../supabase.js').getSupabase>, from: string, to: string): Promise<{ revenue: number; orders: number; sessions: number | null }> {
   const { data: orders, error } = await sb
     .from('shopify_orders')
-    .select('total_price')
+    .select('total_price, refunded_amount')
     .gte('created_at', from)
     .lte('created_at', to + 'T23:59:59')
-    .in('financial_status', ['PAID', 'PARTIALLY_PAID'])
+    .in('financial_status', SALE_STATUSES)
     .eq('test', false);
   if (error) throw new Error(error.message);
-  const revenue = (orders ?? []).reduce((s, r) => s + Number(r.total_price ?? 0), 0);
+  const revenue = (orders ?? []).reduce((s, r) => s + netOrderTotal(r), 0);
   const ordersCount = (orders ?? []).length;
   // sessions: opcional via sessions_by_region — se nao disponivel, decomposition vira null
   let sessions: number | null = null;

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { registerTool } from '../registry.js';
 import { getSupabase } from '../../supabase.js';
-import { PeriodPresetSchema, resolvePeriod, envelope } from '../util.js';
+import { PeriodPresetSchema, resolvePeriod, envelope, SALE_STATUSES } from '../util.js';
 
 const Input = z.object({
   period: PeriodPresetSchema,
@@ -16,7 +16,7 @@ export function register(): void {
     name: 'get_orders_count',
     area: 'performance',
     description:
-      'Volume de pedidos no periodo. Default status=PAID (inclui PARTIALLY_PAID). status=all retorna todos. Sempre exclui test=true.',
+      'Volume de pedidos no periodo. Default status=PAID (inclui PARTIALLY_PAID e PARTIALLY_REFUNDED). status=all retorna todos. Sempre exclui test=true.',
     inputSchema: Input,
     handler: async (input) => {
       const period = resolvePeriod(input.period);
@@ -28,7 +28,7 @@ export function register(): void {
         .lte('created_at', period.to + 'T23:59:59')
         .eq('test', false);
       if (input.status === 'PAID') {
-        q = q.in('financial_status', ['PAID', 'PARTIALLY_PAID']);
+        q = q.in('financial_status', SALE_STATUSES);
       } else if (input.status !== 'all') {
         q = q.eq('financial_status', input.status);
       }
